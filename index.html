@@ -15,10 +15,13 @@
                         primary: '#3B82F6',
                         secondary: '#EC4899',
                         accent: '#10B981',
-                        dark: '#1E293B',  // 保留变量但不使用
+                        dark: '#1E293B',
                         light: '#F8FAFC',
-                        cardStart: '#84cc16', // 黄绿渐变起点
-                        cardEnd: '#facc15'   // 黄绿渐变终点
+                        cardStart: '#84cc16',
+                        cardEnd: '#facc15',
+                        passwordWeak: '#ef4444',
+                        passwordMedium: '#f59e0b',
+                        passwordStrong: '#10b981'
                     },
                     fontFamily: {
                         stxingkai: ['"STXingkai"', '"华文行楷"', 'serif'],
@@ -28,11 +31,10 @@
             }
         }
     </script>
-    
+
     <style type="text/tailwindcss">
-        /* 强制全局浅色模式，覆盖系统深色偏好 */
         :root {
-            color-scheme: light; /* 告知浏览器使用浅色模式配色 */
+            color-scheme: light;
         }
 
         @layer utilities {
@@ -43,9 +45,11 @@
                 text-shadow: 0 2px 4px rgba(0,0,0,0.3);
             }
             .nav-item {
-                @apply text-center px-3 py-2 rounded-lg font-bold text-white transition-all duration-300 btn-effect cursor-pointer;
+                @apply text-center px-4 py-2.5 rounded-lg font-bold text-white transition-all duration-300 btn-effect cursor-pointer;
                 flex: 1 1 auto;
                 min-width: 80px;
+                position: relative;
+                z-index: 10;
             }
             .btn-effect {
                 @apply relative overflow-hidden;
@@ -119,150 +123,510 @@
             .card-icon {
                 @apply text-5xl md:text-6xl text-cardStart mb-4 transform transition-all duration-500 hover:scale-110 hover:text-cardEnd text-center;
             }
+            .dropdown-item {
+                @apply w-full text-left px-3 py-1.5 text-gray-700 hover:bg-gray-100 transition-colors text-sm cursor-pointer;
+            }
+            .user-menu-container {
+                @apply relative z-50;
+            }
+            .user-dropdown {
+                @apply absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg py-1 opacity-0 invisible transition-all duration-300 transform translate-y-1 z-50;
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            }
+            .user-menu-container:hover .user-dropdown {
+                @apply opacity-100 visible translate-y-0;
+            }
+            .password-strength-bar {
+                @apply h-1.5 w-full bg-gray-200 rounded-full overflow-hidden mt-1 mb-2;
+            }
+            .password-strength-fill {
+                @apply h-full transition-all duration-300;
+            }
+            .account-modal {
+                @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4 transition-opacity duration-300;
+            }
+            .account-modal-content {
+                @apply bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0;
+                max-height: 90vh;
+            }
+            .account-modal.active {
+                @apply flex;
+            }
+            .account-modal.active .account-modal-content {
+                @apply scale-100 opacity-100;
+            }
+            .admin-action-btn {
+                @apply w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg transition-colors;
+            }
+            .modal-container {
+                @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4 transition-opacity duration-300;
+            }
+            .modal {
+                @apply bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0;
+            }
+            .modal-container.active {
+                @apply flex;
+            }
+            .modal-container.active .modal {
+                @apply scale-100 opacity-100;
+            }
+            .captcha-container {
+                @apply w-full bg-gray-100 rounded-lg p-4 mb-4;
+            }
+            .captcha-slider {
+                @apply h-10 bg-gray-200 rounded-full relative overflow-hidden cursor-pointer;
+            }
+            .captcha-slider-fill {
+                @apply absolute left-0 top-0 h-full bg-cardStart transition-all duration-300 w-0;
+            }
+            .captcha-slider-button {
+                @apply absolute left-0 top-0 h-12 w-12 bg-white rounded-full shadow-md flex items-center justify-center -translate-y-1 border border-gray-300 transition-all duration-300 z-10;
+            }
+            .captcha-text {
+                @apply text-center text-sm text-gray-500 my-2;
+            }
+            .page {
+                @apply fixed inset-0 z-30 transition-all duration-500 transform translate-x-full;
+                overflow-y: auto; /* 修复滚动问题：允许页面内容滚动 */
+            }
+            .page.active {
+                @apply translate-x-0;
+            }
+            header {
+                z-index: 90 !important;
+            }
+            .header-button {
+                @apply relative z-10;
+            }
+            .user-details-modal {
+                @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4 transition-opacity duration-300;
+            }
+            .user-details-content {
+                @apply bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0;
+                max-height: 90vh;
+            }
+            .user-details-modal.active {
+                @apply flex;
+            }
+            .user-details-modal.active .user-details-content {
+                @apply scale-100 opacity-100;
+            }
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 min-h-screen flex flex-col">
-    <!-- 导航栏 - 固定背景，不透明 -->
-    <header class="bg-white/90 backdrop-blur-md shadow-md sticky top-0 z-50 transition-all duration-300 py-2">
-        <div class="container mx-auto px-4">
-            <!-- 完整导航栏 - PC/PAD 一排放置 -->
-            <div class="hidden md:flex items-center justify-between gap-2 w-full">
-                <!-- 品牌按钮 - 华文行楷 异形设计 -->
-                <a href="#" class="brand-shape bg-gradient-to-r from-cardStart to-cardEnd px-5 py-1.5 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                    <span class="font-stxingkai text-[clamp(1.2rem,2vw,2rem)] text-white text-shadow px-1">
-                        Airborne Island
-                    </span>
-                </a>
-                
-                <!-- 导航链接 -->
-                <div class="flex-grow flex gap-2 mx-1">
-                    <a href="#" class="nav-item bg-primary">首页</a>
-                    <a href="#" class="nav-item bg-primary">活动</a>
-                    <a href="#" class="nav-item bg-primary">信息</a>
-                    <a href="#" class="nav-item bg-primary">充值</a>
-                    <a href="#" class="nav-item bg-red-500">黑名单</a>
-                    <a href="#" class="nav-item bg-red-500">反馈</a>
-                    <a href="#" class="nav-item bg-red-500">文档</a>
-                    <button id="login-button" class="nav-item bg-secondary">登录</button>
-                </div>
-                
-                <!-- 下载游戏按钮 - 调整大小和间距 -->
-                <a href="https://mc.163.com" target="_blank" class="flex items-center gap-3 bg-accent text-white px-8 py-2.5 rounded-lg shadow btn-effect hover:shadow-lg transition-all whitespace-nowrap text-base min-w-[160px] justify-center">
-                    <i class="fa fa-download text-xl"></i>
-                    <span class="font-bold">下载游戏</span>
-                </a>
-            </div>
-            
-            <!-- 移动端导航 - 品牌居中，按钮分多行 -->
-            <div class="md:hidden">
-                <!-- 品牌按钮 - 调整大小 -->
-                <a href="#" class="brand-shape bg-gradient-to-r from-cardStart to-cardEnd px-5 py-1.5 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 block mx-auto mb-3">
-                    <span class="font-stxingkai text-[clamp(1.5rem,4vw,2.5rem)] text-white text-shadow text-center">
-                        Airborne Island
-                    </span>
-                </a>
-                
-                <!-- 导航链接 - 减少间距 -->
-                <nav class="mb-3">
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <a href="#" class="nav-item bg-primary">首页</a>
-                        <a href="#" class="nav-item bg-primary">活动</a>
-                        <a href="#" class="nav-item bg-primary">信息</a>
-                        <a href="#" class="nav-item bg-primary">充值</a>
+    <!-- 主页面容器 -->
+    <div id="main-page" class="page active">
+        <!-- 账号管理模态框 -->
+        <div id="account-modal" class="account-modal">
+            <div class="account-modal-content">
+                <div class="h-full flex flex-col">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="font-bold text-lg bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">账号管理</h3>
+                        <button id="close-account-modal" class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                            <i class="fa fa-times"></i>
+                        </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <a href="#" class="nav-item bg-red-500">黑名单</a>
-                        <a href="#" class="nav-item bg-red-500">反馈</a>
-                        <a href="#" class="nav-item bg-red-500">文档</a>
-                        <button id="login-button" class="nav-item bg-secondary">登录</button>
-                    </div>
-                </nav>
-                
-                <!-- 下载游戏按钮 调整大小 -->
-                <a href="https://mc.163.com" target="_blank" class="mt-3 block mx-auto w-fit flex items-center gap-3 bg-accent text-white px-8 py-2.5 rounded-lg shadow btn-effect hover:shadow-lg transition-all text-base min-w-[160px] justify-center">
-                    <i class="fa fa-download text-xl"></i>
-                    <span class="font-bold">下载游戏</span>
-                </a>
-            </div>
-        </div>
-    </header>
 
-    <!-- 主要内容 -->
-    <main class="flex-grow">
-        <div class="container mx-auto px-4 py-5">
-            <!-- 标题区域 调整间距 -->
-            <h1 class="fade-in text-[clamp(1.5rem,4vw,3rem)] font-bold text-center mb-4 text-shadow bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent text-animate" style="animation-delay: 0.2s">
-                Airborne Island 空岛服
-            </h1>
-            
-            <p class="fade-in text-center text-gray-700 text-base md:text-lg mb-6 max-w-2xl mx-auto font-medium" style="animation-delay: 0.5s">
-                欢迎您游玩Airborne Island 空岛服，开启您的冒险之旅！
-            </p>
-            
-            <!-- 服务器号 - 确保居中 -->
-            <div class="flex justify-center mb-8">
-                <p class="fade-in text-center text-gray-800 font-bold text-lg md:text-xl p-4 bg-gradient-to-r from-cardStart/20 to-cardEnd/20 rounded-full shadow-md server-id-animate bg-white" style="animation-delay: 0.8s; min-width: 300px;">
-                    服务器号：21078065租赁服
-                </p>
-            </div>
-            
-            <!-- 特性卡片 - 增大图标尺寸，保持原有文字 -->
-            <div class="max-w-6xl mx-auto">
-                <!-- 第一行三个卡片 -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.1s">
-                        <div class="card-icon">
-                            <i class="fa fa-gamepad"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">小游戏世界</h3>
-                        <p class="text-gray-700 text-center text-sm">精心挑选10个经典小游戏，饥饿游戏，pvp跑酷等游戏，赢得游戏胜利可获得金币（商店交易道具） 小游戏有各种难度，适合每一个玩家</p>
-                    </div>
-                    
-                    <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.3s">
-                        <div class="card-icon">
-                            <i class="fa fa-users"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">社区互动</h3>
-                        <p class="text-gray-700 text-center text-sm">创建自己的集团，工会和社区，向管理员申请你的区域，打造你的工会基地，进行交易与合作。</p>
-                    </div>
-                    
-                    <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.5s">
-                        <div class="card-icon">
-                            <i class="fa fa-calendar"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">定期活动</h3>
-                        <p class="text-gray-700 text-center text-sm">特殊日期会举办活动，如VIP打折，小彩蛋，随机发放金币等。找到彩蛋可以找管理员兑奖哦！</p>
-                    </div>
-                </div>
-                
-                <!-- 第二行两个卡片 -->
-                <div class="flex justify-center">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                        <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.7s">
-                            <div class="card-icon">
-                                <i class="fa fa-shield"></i>
+                    <div id="account-modal-content" class="flex-grow overflow-y-auto p-4">
+                        <!-- 未登录状态 -->
+                        <div id="not-logged-in-view" class="h-full flex flex-col items-center justify-center text-center">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <i class="fa fa-user-circle text-4xl text-gray-400"></i>
                             </div>
-                            <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">安全保障</h3>
-                            <p class="text-gray-700 text-center text-sm">严格的违禁物品检查，严防外挂，定期数据备份，为您提供安全稳定的游戏环境。</p>
+                            <p class="text-gray-500 mb-6">请先登录以管理您的账号</p>
+                            <button id="modal-login-button" class="w-full bg-gradient-to-r from-cardStart to-cardEnd text-white py-2.5 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
+                                登录账号
+                            </button>
+                            <button id="modal-register-button" class="w-full mt-3 bg-white border border-cardStart text-cardStart py-2.5 rounded-lg font-bold transition-all hover:bg-cardStart/5">
+                                注册账号
+                            </button>
+                            <button id="modal-admin-login-button" class="w-full mt-3 bg-white border border-purple-500 text-purple-600 py-2.5 rounded-lg font-bold transition-all hover:bg-purple-50">
+                                <i class="fa fa-shield mr-1"></i>登录管理员账号
+                            </button>
                         </div>
-                        
-                        <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.9s">
-                            <div class="card-icon">
-                                <i class="fa fa-refresh"></i>
+
+                        <!-- 已登录状态 - 普通用户 -->
+                        <div id="logged-in-view" class="hidden">
+                            <div class="text-center mb-6">
+                                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-3 mx-auto">
+                                    <i class="fa fa-user-circle text-5xl text-cardStart"></i>
+                                </div>
+                                <h4 id="modal-username" class="font-bold text-xl mb-1"></h4>
+                                <p id="modal-email" class="text-gray-500 text-sm mb-2"></p>
+                                <div id="modal-role" class="inline-block px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full"></div>
                             </div>
-                            <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">持续更新</h3>
-                            <p class="text-gray-700 text-center text-sm">服主会紧跟网易更新，确保您能每时每刻游玩最新内容，带来更好的游戏体验。</p>
+
+                            <div class="space-y-3 mb-6">
+                                <button id="modal-change-name" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-center">
+                                        <i class="fa fa-pencil text-cardStart mr-3"></i>
+                                        <span>修改用户名</span>
+                                    </div>
+                                    <i class="fa fa-chevron-right text-gray-400"></i>
+                                </button>
+
+                                <button id="modal-change-password" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-center">
+                                        <i class="fa fa-lock text-cardStart mr-3"></i>
+                                        <span>修改密码</span>
+                                    </div>
+                                    <i class="fa fa-chevron-right text-gray-400"></i>
+                                </button>
+
+                                <button id="modal-view-profile" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-center">
+                                        <i class="fa fa-id-card text-cardStart mr-3"></i>
+                                        <span>查看资料</span>
+                                    </div>
+                                    <i class="fa fa-chevron-right text-gray-400"></i>
+                                </button>
+                            </div>
+
+                            <div class="border-t border-gray-200 pt-4">
+                                <button id="modal-logout-button" class="w-full flex items-center justify-center p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                                    <i class="fa fa-sign-out mr-2"></i>
+                                    <span>退出登录</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 管理组面板 -->
+                        <div id="admin-panel-view" class="hidden">
+                            <div class="text-center mb-6">
+                                <div class="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mb-3 mx-auto">
+                                    <i class="fa fa-shield text-5xl text-purple-600"></i>
+                                </div>
+                                <h4 id="admin-username" class="font-bold text-xl mb-1"></h4>
+                                <p id="admin-email" class="text-gray-500 text-sm mb-2"></p>
+                                <div class="inline-block px-2 py-0.5 bg-purple-600 text-white text-xs rounded-full">管理组</div>
+                            </div>
+
+                            <div class="mb-6">
+                                <h5 class="font-bold text-gray-700 mb-3">用户管理</h5>
+
+                                <div class="relative mb-4">
+                                    <input type="text" id="search-user" placeholder="搜索用户邮箱、ID或用户名"
+                                        class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all">
+                                    <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                </div>
+
+                                <div id="user-list" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                    <div class="text-center text-gray-500 text-sm py-6">
+                                        搜索用户以管理账号
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-200 pt-4">
+                                <button id="admin-logout-button" class="w-full flex items-center justify-center p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                                    <i class="fa fa-sign-out mr-2"></i>
+                                    <span>退出登录</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+
+        <!-- 导航栏 -->
+        <header class="bg-white/90 backdrop-blur-md shadow-md sticky top-0 z-40 transition-all duration-300 py-2">
+            <div class="container mx-auto px-4">
+                <!-- 桌面端导航 -->
+                <div class="hidden md:flex items-center justify-between w-full">
+                    <!-- 左侧品牌和导航链接 -->
+                    <div class="flex items-center gap-6">
+                        <!-- 品牌按钮 -->
+                        <a href="#" class="brand-shape bg-gradient-to-r from-cardStart to-cardEnd px-5 py-1.5 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                            <span class="font-stxingkai text-[clamp(1.2rem,2vw,2rem)] text-white text-shadow px-1">
+                                Airborne Island
+                            </span>
+                        </a>
+
+                        <!-- 导航链接 -->
+                        <div class="flex gap-4">
+                            <a href="#" class="nav-item bg-primary">首页</a>
+                            <a href="#" class="nav-item bg-primary">活动</a>
+                            <a href="#" class="nav-item bg-primary">信息</a>
+                            <a href="#" class="nav-item bg-primary">充值</a>
+                            <a href="#" class="nav-item bg-red-500">黑名单</a>
+                            <a href="#" class="nav-item bg-red-500">反馈</a>
+                            <a href="#" class="nav-item bg-red-500">文档</a>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：用户功能和下载按钮 -->
+                    <div class="flex items-center gap-4">
+                        <!-- 账号管理按钮 -->
+                        <button id="account-button" class="nav-item bg-blue-600 flex items-center gap-2 px-5 header-button">
+                            <i class="fa fa-user-circle"></i>
+                            <span>账号</span>
+                        </button>
+
+                        <!-- 管理组功能按钮 -->
+                        <div>
+                            <button id="admin-function-button" class="nav-item bg-purple-600 header-button">
+                                <i class="fa fa-shield mr-1"></i>管理组功能
+                            </button>
+                        </div>
+
+                        <!-- 下载游戏按钮 -->
+                        <a href="https://mc.163.com" target="_blank" class="flex items-center gap-3 bg-accent text-white px-6 py-2.5 rounded-lg shadow btn-effect hover:shadow-lg transition-all whitespace-nowrap text-base header-button">
+                            <i class="fa fa-download text-xl"></i>
+                            <span class="font-bold">下载游戏</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 移动端导航 -->
+                <div class="md:hidden">
+                    <!-- 品牌按钮 -->
+                    <a href="#" class="brand-shape bg-gradient-to-r from-cardStart to-cardEnd px-5 py-1.5 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 block mx-auto mb-3">
+                        <span class="font-stxingkai text-[clamp(1.5rem,4vw,2.5rem)] text-white text-shadow text-center">
+                            Airborne Island
+                        </span>
+                    </a>
+
+                    <!-- 导航链接 -->
+                    <nav class="mb-4">
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <a href="#" class="nav-item bg-primary">首页</a>
+                            <a href="#" class="nav-item bg-primary">活动</a>
+                            <a href="#" class="nav-item bg-primary">信息</a>
+                            <a href="#" class="nav-item bg-primary">充值</a>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <a href="#" class="nav-item bg-red-500">黑名单</a>
+                            <a href="#" class="nav-item bg-red-500">反馈</a>
+                            <a href="#" class="nav-item bg-red-500">文档</a>
+                        </div>
+                    </nav>
+
+                    <!-- 移动端用户功能和下载按钮 -->
+                    <div class="flex flex-wrap gap-3 justify-center">
+                        <button id="mobile-account-button" class="nav-item bg-blue-600 flex items-center justify-center gap-2 w-[40%] header-button">
+                            <i class="fa fa-user-circle"></i>
+                            <span>账号</span>
+                        </button>
+                        <button id="mobile-admin-function-button" class="nav-item bg-purple-600 w-[40%] header-button">
+                            <i class="fa fa-shield mr-1"></i>管理组
+                        </button>
+                        <a href="https://mc.163.com" target="_blank" class="flex items-center gap-2 bg-accent text-white px-4 py-2.5 rounded-lg shadow btn-effect hover:shadow-lg transition-all whitespace-nowrap text-sm w-full justify-center mt-1 header-button">
+                            <i class="fa fa-download"></i>
+                            <span class="font-bold">下载游戏</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="flex-grow">
+            <div class="container mx-auto px-4 py-5">
+                <!-- 标题区域 -->
+                <h1 class="fade-in text-[clamp(1.5rem,4vw,3rem)] font-bold text-center mb-4 text-shadow bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent text-animate" style="animation-delay: 0.2s">
+                    Airborne Island 空岛服
+                </h1>
+
+                <p class="fade-in text-center text-gray-700 text-base md:text-lg mb-6 max-w-2xl mx-auto font-medium" style="animation-delay: 0.5s">
+                    欢迎您游玩Airborne Island 空岛服，开启您的冒险之旅！
+                </p>
+
+                <!-- 服务器号 -->
+                <div class="flex justify-center mb-8">
+                    <p class="fade-in text-center text-gray-800 font-bold text-lg md:text-xl p-4 bg-gradient-to-r from-cardStart/20 to-cardEnd/20 rounded-full shadow-md server-id-animate bg-white" style="animation-delay: 0.8s; min-width: 300px;">
+                        服务器号：21078065租赁服
+                    </p>
+                </div>
+
+                <!-- 特性卡片 -->
+                <div class="max-w-6xl mx-auto">
+                    <!-- 第一行三个卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.1s">
+                            <div class="card-icon">
+                                <i class="fa fa-gamepad"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">小游戏世界</h3>
+                            <p class="text-gray-700 text-center text-sm">精心挑选10个经典小游戏，饥饿游戏，pvp跑酷等游戏，赢得游戏胜利可获得金币（商店交易道具） 小游戏有各种难度，适合每一个玩家</p>
+                        </div>
+
+                        <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.3s">
+                            <div class="card-icon">
+                                <i class="fa fa-users"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">社区互动</h3>
+                            <p class="text-gray-700 text-center text-sm">创建自己的集团，工会和社区，向管理员申请你的区域，打造你的工会基地，进行交易与合作。</p>
+                        </div>
+
+                        <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.5s">
+                            <div class="card-icon">
+                                <i class="fa fa-calendar"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">定期活动</h3>
+                            <p class="text-gray-700 text-center text-sm">特殊日期会举办活动，如VIP打折，小彩蛋，随机发放金币等。找到彩蛋可以找管理员兑奖哦！</p>
+                        </div>
+                    </div>
+
+                    <!-- 第二行两个卡片 -->
+                    <div class="flex justify-center">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+                            <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.7s">
+                                <div class="card-icon">
+                                    <i class="fa fa-shield"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">安全保障</h3>
+                                <p class="text-gray-700 text-center text-sm">严格的违禁物品检查，严防外挂，定期数据备份，为您提供安全稳定的游戏环境。</p>
+                            </div>
+
+                            <div class="gradient-card rounded-xl shadow p-5 card-hover animate-float fade-in" style="animation-delay: 1.9s">
+                                <div class="card-icon">
+                                    <i class="fa fa-refresh"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-center mb-2 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">持续更新</h3>
+                                <p class="text-gray-700 text-center text-sm">服主会紧跟网易易更新，确保您能每时每刻游玩最新内容，带来更好的游戏体验。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="bg-dark text-white py-5 mt-10 fade-in" style="animation-delay: 2.1s">
+            <div class="container mx-auto px-4 text-center">
+                <p class="font-stxingkai text-xl mb-1 bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent">Airborne Island</p>
+                <p class="mb-1 text-sm">© 2025 Airborne Island 空岛服 - 保留所有权利</p>
+                <p class="text-gray-400 text-xs">精心打造的游戏体验</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 管理组功能页面 -->
+    <div id="admin-page" class="page bg-gradient-to-br from-gray-50 to-gray-100">
+        <header class="bg-white/90 backdrop-blur-md shadow-md sticky top-0 z-40 transition-all duration-300 py-2">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between">
+                    <a href="#" class="brand-shape bg-gradient-to-r from-purple-600 to-purple-400 px-5 py-1.5 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                        <span class="font-stxingkai text-[clamp(1.2rem,2vw,2rem)] text-white text-shadow px-1">
+                            管理组功能
+                        </span>
+                    </a>
+
+                    <div class="flex items-center gap-3">
+                        <button id="back-to-main" class="nav-item bg-primary flex items-center gap-1">
+                            <i class="fa fa-arrow-left"></i>
+                            <span>返回首页</span>
+                        </button>
+
+                        <button id="admin-page-logout" class="nav-item bg-red-500">
+                            <i class="fa fa-sign-out mr-1"></i>退出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow py-6">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">管理组控制面板</h2>
+
+                <!-- 管理功能卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    <!-- 账号封禁管理 -->
+                    <div class="gradient-card rounded-xl shadow p-6 card-hover cursor-pointer" id="ban-management-card">
+                        <div class="text-6xl text-purple-600 mb-4 text-center">
+                            <i class="fa fa-ban"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-center mb-3">账号封禁管理</h3>
+                        <p class="text-gray-600 text-center text-sm">管理用户账号封禁状态，查看封禁列表，执行解封操作</p>
+                    </div>
+
+                    <!-- 账号禁言管理 -->
+                    <div class="gradient-card rounded-xl shadow p-6 card-hover cursor-pointer" id="mute-management-card">
+                        <div class="text-6xl text-purple-600 mb-4 text-center">
+                            <i class="fa fa-volume-off"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-center mb-3">账号禁言管理</h3>
+                        <p class="text-gray-600 text-center text-sm">管理用户聊天禁言状态，设置禁言时长和原因</p>
+                    </div>
+
+                    <!-- 账号管理 -->
+                    <div class="gradient-card rounded-xl shadow p-6 card-hover cursor-pointer" id="account-management-card">
+                        <div class="text-6xl text-purple-600 mb-4 text-center">
+                            <i class="fa fa-user-circle"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-center mb-3">账号管理</h3>
+                        <p class="text-gray-600 text-center text-sm">查看和编辑用户账号信息，管理用户权限</p>
+                    </div>
+                </div>
+
+                <!-- 管理内容区域 -->
+                <div class="mt-8 bg-white rounded-xl shadow-lg p-6 max-w-5xl mx-auto">
+                    <div id="ban-management-content" class="admin-content">
+                        <h3 class="text-xl font-bold mb-4 text-purple-600">账号封禁管理</h3>
+
+                        <div class="relative mb-6">
+                            <input type="text" id="ban-search-user" placeholder="搜索用户邮箱、ID或用户名"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all">
+                            <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+
+                        <div id="ban-user-list" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                            <div class="text-center text-gray-500 text-sm py-6">
+                                搜索用户进行封禁管理
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mute-management-content" class="admin-content hidden">
+                        <h3 class="text-xl font-bold mb-4 text-purple-600">账号禁言管理</h3>
+
+                        <div class="relative mb-6">
+                            <input type="text" id="mute-search-user" placeholder="搜索用户邮箱、ID或用户名"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all">
+                            <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+
+                        <div id="mute-user-list" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                            <div class="text-center text-gray-500 text-sm py-6">
+                                搜索用户进行禁言管理
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="account-management-content" class="admin-content hidden">
+                        <h3 class="text-xl font-bold mb-4 text-purple-600">账号管理</h3>
+
+                        <div class="relative mb-6">
+                            <input type="text" id="account-search-user" placeholder="搜索用户邮箱、ID或用户名"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all">
+                            <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+
+                        <div id="account-user-list" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                            <div class="text-center text-gray-500 text-sm py-6">
+                                搜索用户进行账号管理
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-dark text-white py-5 mt-10">
+            <div class="container mx-auto px-4 text-center">
+                <p class="font-stxingkai text-xl mb-1 bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">管理组系统</p>
+                <p class="mb-1 text-sm">© 2025 Airborne Island 空岛服 - 管理组功能</p>
+                <p class="text-gray-400 text-xs">仅限管理员使用</p>
+            </div>
+        </footer>
+    </div>
 
     <!-- 登录注册模态框 -->
-    <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0" id="modal-content">
+    <div id="auth-modal" class="modal-container">
+        <div class="modal" id="modal-content">
             <div class="p-5">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold bg-gradient-to-r from-cardStart to-cardEnd bg-clip-text text-transparent text-animate">账户管理</h2>
@@ -270,78 +634,2014 @@
                         <i class="fa fa-times"></i>
                     </button>
                 </div>
-                
+
                 <!-- 标签切换 -->
                 <div class="flex border-b mb-4 relative">
                     <button class="auth-tab active flex-1 py-2 font-medium text-cardStart border-b-2 border-cardStart transition-all" data-form="login">登录</button>
                     <button class="auth-tab flex-1 py-2 font-medium text-gray-500 hover:text-gray-700 transition-all" data-form="register">注册</button>
                     <div class="absolute bottom-0 left-0 h-0.5 w-1/2 bg-gradient-to-r from-cardStart to-cardEnd transition-all duration-300" id="tab-indicator"></div>
                 </div>
-                
+
                 <!-- 登录表单 -->
                 <div id="login-form" class="auth-form active">
                     <div class="mb-3">
                         <label class="block text-gray-700 mb-1 text-sm" for="login-email">邮箱</label>
                         <input type="email" id="login-email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请输入邮箱">
                     </div>
-                    
+
                     <div class="mb-4">
                         <label class="block text-gray-700 mb-1 text-sm" for="login-password">密码</label>
                         <input type="password" id="login-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请输入密码">
                     </div>
-                    
+
+                    <div class="mb-4">
+                        <div class="captcha-container">
+                            <div class="captcha-slider">
+                                <div class="captcha-slider-fill"></div>
+                                <div class="captcha-slider-button">
+                                    <i class="fa fa-angle-right text-gray-500"></i>
+                                </div>
+                            </div>
+                            <p class="captcha-text">请向右拖动滑块完成验证</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="form-checkbox text-cardStart rounded h-4 w-4">
+                            <span class="ml-2 text-sm text-gray-600">记住我</span>
+                        </label>
+                        <a href="#" class="text-sm text-cardStart hover:underline forgot-password">忘记密码？</a>
+                    </div>
+
                     <button id="login-submit" class="w-full bg-gradient-to-r from-cardStart to-cardEnd text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
                         登录
                     </button>
-                    
-                    <div class="mt-3 text-center">
-                        <a href="#" class="forgot-password text-cardStart hover:text-cardEnd inline-block py-1 px-2 rounded hover:bg-cardStart/5 transition-colors text-sm">忘记密码？</a>
-                    </div>
+
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        还没有账号？<a href="#" class="text-cardStart hover:underline create-account">立即注册</a>
+                    </p>
                 </div>
-                
+
                 <!-- 注册表单 -->
                 <div id="register-form" class="auth-form hidden">
                     <div class="mb-3">
                         <label class="block text-gray-700 mb-1 text-sm" for="register-email">邮箱</label>
                         <input type="email" id="register-email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请输入邮箱">
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label class="block text-gray-700 mb-1 text-sm" for="register-username">用户名</label>
-                        <input type="text" id="register-username" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请设置用户名">
+                        <label class="block text-gray-700 mb-1 text-sm" for="register-username">用户名 <span class="text-red-500 text-xs">(最多6个字)</span></label>
+                        <input type="text" id="register-username" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请输入用户名" maxlength="6">
+                        <div id="username-hint" class="text-xs mt-1 text-gray-500 hidden">用户名长度不能超过6个字符</div>
                     </div>
-                    
-                    <div class="mb-4">
+
+                    <div class="mb-3">
                         <label class="block text-gray-700 mb-1 text-sm" for="register-password">密码</label>
-                        <input type="password" id="register-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请设置密码（至少6位）">
+                        <input type="password" id="register-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请输入密码">
+
+                        <div class="password-strength-bar mt-1 mb-2">
+                            <div id="password-strength-fill" class="password-strength-fill" style="width: 0%"></div>
+                        </div>
+                        <div id="password-strength-text" class="text-xs text-gray-500">密码强度：未输入</div>
                     </div>
-                    
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-1 text-sm" for="register-confirm-password">确认密码</label>
+                        <input type="password" id="register-confirm-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请再次输入密码">
+                        <div id="password-mismatch" class="text-xs mt-1 text-red-500 hidden">两次输入的密码不一致</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="captcha-container">
+                            <div class="captcha-slider">
+                                <div class="captcha-slider-fill"></div>
+                                <div class="captcha-slider-button">
+                                    <i class="fa fa-angle-right text-gray-500"></i>
+                                </div>
+                            </div>
+                            <p class="captcha-text">请向右拖动滑块完成验证</p>
+                        </div>
+                    </div>
+
                     <button id="register-submit" class="w-full bg-gradient-to-r from-cardStart to-cardEnd text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
                         注册
                     </button>
+
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        已有账号？<a href="#" class="text-cardStart hover:underline back-to-login">返回登录</a>
+                    </p>
                 </div>
-                
+
                 <!-- 忘记密码表单 -->
                 <div id="forgot-form" class="auth-form hidden">
-                    <p class="text-gray-600 mb-3 text-sm">请输入您的邮箱，我们将发送重置链接</p>
-                    
+                    <h3 class="text-lg font-medium mb-4 text-gray-700">重置密码</h3>
+                    <p class="text-sm text-gray-500 mb-4">请输入您的邮箱，我们将发送重置密码的链接到您的邮箱</p>
+
                     <div class="mb-4">
                         <label class="block text-gray-700 mb-1 text-sm" for="forgot-email">邮箱</label>
                         <input type="email" id="forgot-email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cardStart/50 focus:border-cardStart transition-all duration-300" placeholder="请输入邮箱">
                     </div>
-                    
+
                     <button id="forgot-submit" class="w-full bg-gradient-to-r from-cardStart to-cardEnd text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
                         发送重置链接
                     </button>
-                    
-                    <div class="mt-3 text-center">
-                        <a href="#" class="back-to-login text-cardStart hover:text-cardEnd inline-block py-1 px-2 rounded hover:bg-cardStart/5 transition-colors text-sm">返回登录</a>
-                    </div>
+
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        <a href="#" class="text-cardStart hover:underline back-to-login">返回登录</a>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 页脚 - 减少间距 -->
+    <!-- 管理员登录模态框 -->
+    <div id="admin-modal" class="modal-container">
+        <div class="modal">
+            <div class="p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">管理员登录</h2>
+                    <button id="close-admin-modal" class="text-gray-500 hover:text-gray-700 text-lg w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="mb-3">
+                    <label class="block text-gray-700 mb-1 text-sm" for="admin-email">管理员邮箱</label>
+                    <input type="email" id="admin-email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300" placeholder="请输入管理员邮箱">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 text-sm" for="admin-password">管理员密码</label>
+                    <input type="password" id="admin-password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300" placeholder="请输入管理员密码">
+                </div>
+
+                <button id="admin-login-submit" class="w-full bg-gradient-to-r from-purple-600 to-purple-400 text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
+                    管理员登录
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理组操作模态框 -->
+    <div id="admin-action-modal" class="modal-container">
+        <div class="modal">
+            <div class="p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="action-modal-title" class="text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">账号操作</h2>
+                    <button id="close-action-modal" class="text-gray-500 hover:text-gray-700 text-lg w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <input type="hidden" id="action-user-id" value="">
+                <input type="hidden" id="action-type" value="">
+
+                <div id="ban-action-content">
+                    <p class="text-gray-700 mb-4">确定要<span id="ban-action-text">封禁</span>用户 <span id="ban-username" class="font-bold"></span> 吗？</p>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-1 text-sm" for="ban-reason">封禁原因</label>
+                        <textarea id="ban-reason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300" placeholder="请输入封禁原因"></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-1 text-sm" for="ban-duration">封禁时长</label>
+                        <select id="ban-duration" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300">
+                            <option value="1">1天</option>
+                            <option value="7">7天</option>
+                            <option value="30">30天</option>
+                            <option value="90">90天</option>
+                            <option value="-1" selected>永久</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button id="cancel-action" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-lg font-bold transition-all hover:bg-gray-50">
+                        取消
+                    </button>
+                    <button id="confirm-action" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
+                        确认
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 禁言操作模态框 -->
+    <div id="mute-modal" class="modal-container">
+        <div class="modal">
+            <div class="p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="mute-modal-title" class="text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">禁言操作</h2>
+                    <button id="close-mute-modal" class="text-gray-500 hover:text-gray-700 text-lg w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <input type="hidden" id="mute-user-id" value="">
+
+                <p class="text-gray-700 mb-4">确定要<span id="mute-action-text">禁言</span>用户 <span id="mute-username" class="font-bold"></span> 吗？</p>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 text-sm" for="mute-reason">禁言原因</label>
+                    <textarea id="mute-reason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300" placeholder="请输入禁言原因"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 text-sm" for="mute-duration">禁言时长</label>
+                    <select id="mute-duration" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all duration-300">
+                        <option value="1">1小时</option>
+                        <option value="24">1天</option>
+                        <option value="168">7天</option>
+                        <option value="720">30天</option>
+                        <option value="-1">永久</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button id="cancel-mute" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-lg font-bold transition-all hover:bg-gray-50">
+                        取消
+                    </button>
+                    <button id="confirm-mute" class="flex-1 bg-orange-500 text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
+                        确认
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户详情模态框 -->
+    <div id="user-details-modal" class="user-details-modal">
+        <div class="user-details-content">
+            <div class="p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">用户详情</h2>
+                    <button id="close-user-details" class="text-gray-500 hover:text-gray-700 text-lg w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+
+                <input type="hidden" id="detail-user-id" value="">
+
+                <div class="text-center mb-6">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-3 mx-auto">
+                        <i class="fa fa-user-circle text-5xl text-purple-600"></i>
+                    </div>
+                    <h4 id="detail-username" class="font-bold text-xl mb-1"></h4>
+                    <p id="detail-email" class="text-gray-500 text-sm mb-2"></p>
+                    <div id="detail-role" class="inline-block px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full"></div>
+                </div>
+
+                <div class="space-y-4 mb-6">
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">用户ID</span>
+                        <span id="detail-id" class="text-gray-800 font-mono text-sm break-all max-w-[60%] text-right"></span>
+                    </div>
+
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">注册时间</span>
+                        <span id="detail-registration-date" class="text-gray-800 text-sm"></span>
+                    </div>
+
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">账号状态</span>
+                        <span id="detail-status" class="inline-block px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">正常</span>
+                    </div>
+
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="text-gray-600">最后活跃</span>
+                        <span id="detail-last-active" class="text-gray-800 text-sm">未知</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="font-bold text-gray-700 mb-3">权限管理</h3>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                            <span>管理组权限</span>
+                            <input type="checkbox" id="set-admin-permission" class="form-checkbox text-purple-600 rounded h-5 w-5">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                            <span>OP权限</span>
+                            <input type="checkbox" id="set-op-permission" class="form-checkbox text-purple-600 rounded h-5 w-5">
+                        </label>
+                    </div>
+
+                    <button id="save-permissions" class="w-full mt-4 bg-gradient-to-r from-purple-600 to-purple-400 text-white py-2 rounded-lg font-bold btn-effect transition-custom shadow-md hover:shadow-lg">
+                        保存权限设置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 加密密钥（实际应用中应使用更安全的密钥管理方式）
+        const ENCRYPTION_KEY = 'ab_island_secret_key_2025';
+        const ADMIN_SECRET_KEY = 'ab_island_admin_key_2025';
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化加密功能的简单实现（实际应用中应使用更安全的加密方式）
+            initEncryptionFunctions();
+
+            // 检查登录状态
+            checkLoginStatus();
+
+            // 初始化事件监听
+            initEventListeners();
+
+            // 初始化滑块验证码
+            initCaptchaSliders();
+
+            // 初始化密码强度检测
+            initPasswordStrengthChecker();
+        });
+
+        // 简单的加密解密实现（实际应用中应使用专业加密库）
+        function initEncryptionFunctions() {
+            // 加密函数
+            window.encryptData = function(data, key = ENCRYPTION_KEY) {
+                let encrypted = '';
+                for (let i = 0; i < data.length; i++) {
+                    const charCode = data.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+                    encrypted += String.fromCharCode(charCode);
+                }
+                return btoa(encrypted);
+            };
+
+            // 解密函数
+            window.decryptData = function(encryptedData, key = ENCRYPTION_KEY) {
+                try {
+                    const decryptedBase64 = atob(encryptedData);
+                    let decrypted = '';
+                    for (let i = 0; i < decryptedBase64.length; i++) {
+                        const charCode = decryptedBase64.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+                        decrypted += String.fromCharCode(charCode);
+                    }
+                    return decrypted;
+                } catch (e) {
+                    console.error('解密失败', e);
+                    return null;
+                }
+            };
+        }
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            const encryptedUser = localStorage.getItem('ab_current_user');
+
+            if (encryptedUser) {
+                try {
+                    const decrypted = decryptData(encryptedUser, ADMIN_SECRET_KEY);
+                    const user = JSON.parse(decrypted);
+
+                    if (user && user.isLoggedIn) {
+                        window.currentUser = user;
+                        window.isAdmin = user.isAdmin || false;
+                        window.op = user.op || false;
+
+                        updateUserInterface();
+                        updateAccountModal();
+                        return;
+                    }
+                } catch (e) {
+                    console.error('检查登录状态失败', e);
+                    localStorage.removeItem('ab_current_user');
+                }
+            }
+
+            window.currentUser = null;
+            window.isAdmin = false;
+            window.op = false;
+            updateUserInterface();
+            updateAccountModal();
+        }
+
+        // 更新用户界面
+        function updateUserInterface() {
+            // 根据登录状态更新界面元素
+            if (window.currentUser && window.currentUser.isLoggedIn) {
+                // 已登录状态
+                document.getElementById('logged-in-view').classList.remove('hidden');
+                document.getElementById('not-logged-in-view').classList.add('hidden');
+                document.getElementById('admin-panel-view').classList.add('hidden');
+
+                document.getElementById('modal-username').textContent = window.currentUser.username;
+                document.getElementById('modal-email').textContent = window.currentUser.email;
+
+                if (window.isAdmin) {
+                    document.getElementById('modal-role').textContent = '管理组';
+                    document.getElementById('modal-role').className = 'inline-block px-2 py-0.5 bg-purple-600 text-white text-xs rounded-full';
+                    document.getElementById('admin-panel-view').classList.remove('hidden');
+                    document.getElementById('logged-in-view').classList.add('hidden');
+                    document.getElementById('admin-username').textContent = window.currentUser.username;
+                    document.getElementById('admin-email').textContent = window.currentUser.email;
+                } else if (window.op) {
+                    document.getElementById('modal-role').textContent = 'OP权限';
+                } else {
+                    document.getElementById('modal-role').textContent = '普通用户';
+                }
+            } else {
+                // 未登录状态
+                document.getElementById('logged-in-view').classList.add('hidden');
+                document.getElementById('admin-panel-view').classList.add('hidden');
+                document.getElementById('not-logged-in-view').classList.remove('hidden');
+            }
+        }
+
+        // 更新账号模态框
+        function updateAccountModal() {
+            // 可以根据需要添加更新账号模态框的逻辑
+        }
+
+        // 初始化滑块验证码
+        function initCaptchaSliders() {
+            const sliders = document.querySelectorAll('.captcha-slider');
+
+            sliders.forEach(slider => {
+                const sliderFill = slider.querySelector('.captcha-slider-fill');
+                const sliderButton = slider.querySelector('.captcha-slider-button');
+                const captchaText = slider.closest('.captcha-container').querySelector('.captcha-text');
+
+                let isDragging = false;
+                let startX;
+                let currentX;
+                const maxWidth = slider.clientWidth - sliderButton.clientWidth;
+
+                // 重置验证码状态
+                function resetCaptcha() {
+                    sliderFill.style.width = '0';
+                    sliderButton.style.transform = 'translateX(0) translateY(-1px)';
+                    sliderButton.innerHTML = '<i class="fa fa-angle-right text-gray-500"></i>';
+                    captchaText.textContent = '请向右拖动滑块完成验证';
+                    captchaText.className = 'captcha-text text-gray-500';
+                    window.captchaVerified = false;
+                    slider.style.pointerEvents = '';
+                }
+
+                // 开始拖动
+                function startDrag(e) {
+                    isDragging = true;
+                    startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                    sliderButton.classList.add('scale-110');
+                }
+
+                // 拖动中
+                function drag(e) {
+                    if (!isDragging) return;
+                    currentX = (e.type.includes('mouse') ? e.clientX : e.touches[0].clientX) - startX;
+                    currentX = Math.max(0, Math.min(currentX, maxWidth));
+
+                    sliderFill.style.width = (currentX + sliderButton.clientWidth / 2) + 'px';
+                    sliderButton.style.transform = `translateX(${currentX}px) translateY(-1px)`;
+                }
+
+                // 结束拖动
+                function endDrag() {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    sliderButton.classList.remove('scale-110');
+
+                    // 验证是否滑动到最右端
+                    if (currentX >= maxWidth - 10) {
+                        captchaText.textContent = '验证成功';
+                        captchaText.className = 'captcha-text text-green-600';
+                        sliderButton.innerHTML = '<i class="fa fa-check text-green-500"></i>';
+                        slider.style.pointerEvents = 'none'; // 禁用再次滑动
+                        window.captchaVerified = true;
+                    } else {
+                        // 复位
+                        resetCaptcha();
+                    }
+                }
+
+                // 添加事件监听
+                sliderButton.addEventListener('mousedown', startDrag);
+                sliderButton.addEventListener('touchstart', startDrag, { passive: true });
+
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag, { passive: true });
+
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchend', endDrag);
+
+                // 初始化时重置验证码
+                resetCaptcha();
+            });
+        }
+
+        // 初始化密码强度检测
+        function initPasswordStrengthChecker() {
+            const passwordInput = document.getElementById('register-password');
+            const strengthFill = document.getElementById('password-strength-fill');
+            const strengthText = document.getElementById('password-strength-text');
+            const confirmPassword = document.getElementById('register-confirm-password');
+            const passwordMismatch = document.getElementById('password-mismatch');
+            const registerButton = document.getElementById('register-submit');
+
+            if (passwordInput && strengthFill && strengthText) {
+                passwordInput.addEventListener('input', function() {
+                    const password = this.value;
+                    const result = checkPasswordStrength(password);
+
+                    // 更新强度条
+                    strengthFill.style.width = `${result.strength * 25}%`;
+
+                    // 设置强度条颜色和文本
+                    if (result.strength === 0) {
+                        strengthFill.className = 'password-strength-fill';
+                        strengthText.textContent = '密码强度：未输入';
+                        strengthText.className = 'text-xs text-gray-500';
+                    } else if (result.strength === 1) {
+                        strengthFill.className = 'password-strength-fill bg-passwordWeak';
+                        strengthText.textContent = `密码强度：弱 - ${result.message}`;
+                        strengthText.className = 'text-xs text-passwordWeak';
+                    } else if (result.strength === 2) {
+                        strengthFill.className = 'password-strength-fill bg-passwordMedium';
+                        strengthText.textContent = `密码强度：中 - ${result.message}`;
+                        strengthText.className = 'text-xs text-passwordMedium';
+                    } else if (result.strength === 3) {
+                        strengthFill.className = 'password-strength-fill bg-passwordMedium';
+                        strengthText.textContent = `密码强度：良好 - ${result.message}`;
+                        strengthText.className = 'text-xs text-passwordMedium';
+                    } else {
+                        strengthFill.className = 'password-strength-fill bg-passwordStrong';
+                        strengthText.textContent = '密码强度：强';
+                        strengthText.className = 'text-xs text-passwordStrong';
+                    }
+
+                    checkPasswordsMatch();
+                });
+            }
+
+            if (confirmPassword && passwordMismatch) {
+                confirmPassword.addEventListener('input', checkPasswordsMatch);
+            }
+
+            function checkPasswordsMatch() {
+                if (passwordInput.value && confirmPassword.value &&
+                    passwordInput.value !== confirmPassword.value) {
+                    passwordMismatch.classList.remove('hidden');
+                    registerButton.disabled = true;
+                } else {
+                    passwordMismatch.classList.add('hidden');
+                    const passwordCheck = checkPasswordStrength(passwordInput.value);
+                    registerButton.disabled = passwordInput.value.length === 0 ||
+                                           !passwordCheck.valid;
+                }
+            }
+
+            // 用户名长度检查
+            const usernameInput = document.getElementById('register-username');
+            const usernameHint = document.getElementById('username-hint');
+
+            if (usernameInput && usernameHint) {
+                usernameInput.addEventListener('input', function() {
+                    checkUsernameLength('register-username', 'username-hint');
+                });
+            }
+        }
+
+        // 检查用户名长度
+        function checkUsernameLength(inputId, hintId) {
+            const input = document.getElementById(inputId);
+            const hint = document.getElementById(hintId);
+
+            if (!input || !hint) return;
+
+            if (input.value.length > 6) {
+                input.value = input.value.substring(0, 6);
+                hint.classList.remove('hidden');
+            } else if (input.value.length === 6) {
+                hint.classList.remove('hidden');
+            } else {
+                hint.classList.add('hidden');
+            }
+        }
+
+        // 检查密码强度
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            let message = '';
+            let valid = false;
+
+            // 密码长度检查
+            if (password.length >= 8) {
+                strength++;
+            } else {
+                message = '密码长度至少8个字符';
+            }
+
+            // 检查是否包含小写字母
+            if (/[a-z]/.test(password)) {
+                strength++;
+            } else if (message === '') {
+                message = '密码应包含小写字母';
+            }
+
+            // 检查是否包含大写字母
+            if (/[A-Z]/.test(password)) {
+                strength++;
+            } else if (message === '') {
+                message = '密码应包含大写字母';
+            }
+
+            // 检查是否包含数字或特殊字符
+            if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) {
+                strength++;
+            } else if (message === '') {
+                message = '密码应包含数字或特殊字符';
+            }
+
+            // 密码是否有效
+            valid = strength >= 4;
+
+            return {
+                strength: strength,
+                message: message,
+                valid: valid
+            };
+        }
+
+        // 验证邮箱格式
+        function isValidEmail(email) {
+            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(email);
+        }
+
+        // 登录功能
+        function login() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+
+            // 基本验证
+            if (!email || !password) {
+                alert('请填写所有必填字段');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+
+            // 验证滑块验证
+            if (!window.captchaVerified) {
+                alert('请完成滑块验证');
+                return;
+            }
+
+            // 获取用户数据
+            const encryptedUsers = localStorage.getItem('ab_users');
+
+            if (!encryptedUsers) {
+                alert('该邮箱未注册');
+                return;
+            }
+
+            try {
+                const decrypted = decryptData(encryptedUsers);
+                const users = JSON.parse(decrypted) || [];
+
+                // 查找用户
+                const user = users.find(u =>
+                    u.email.toLowerCase() === email.toLowerCase() &&
+                    u.password === password
+                );
+
+                if (user) {
+                    // 检查账号状态
+                    if (user.isBanned) {
+                        alert(`该账号已被封禁，原因：${user.banReason || '未说明'}`);
+                        return;
+                    }
+
+                    // 登录成功
+                    window.currentUser = {
+                        id: user.id,
+                        username: user.username,
+                        email: user.email,
+                        isAdmin: user.isAdmin || false,
+                        op: user.op || false,
+                        isLoggedIn: true,
+                        lastLogin: new Date().toISOString()
+                    };
+
+                    window.isAdmin = user.isAdmin || false;
+                    window.op = user.op || false;
+
+                    // 更新用户最后登录时间
+                    user.lastLogin = new Date().toISOString();
+                    const encrypted = encryptData(JSON.stringify(users));
+                    localStorage.setItem('ab_users', encrypted);
+
+                    // 保存当前登录用户
+                    const encryptedUser = encryptData(JSON.stringify(window.currentUser), ADMIN_SECRET_KEY);
+                    localStorage.setItem('ab_current_user', encryptedUser);
+
+                    // 更新界面
+                    updateUserInterface();
+                    updateAccountModal();
+                    closeLoginModal();
+
+                    // 关闭账号模态框并重新打开以刷新内容
+                    const modal = document.getElementById('account-modal');
+                    if (modal.classList.contains('active')) {
+                        toggleAccountModal();
+                        setTimeout(toggleAccountModal, 300);
+                    } else {
+                        toggleAccountModal();
+                    }
+
+                    alert(`登录成功！欢迎回来，${user.username}！`);
+                } else {
+                    alert('邮箱或密码不正确');
+                }
+            } catch (e) {
+                console.error('登录失败', e);
+                alert('登录失败，系统错误');
+            }
+        }
+
+        // 注册功能
+        function register() {
+            // 获取表单数据
+            const email = document.getElementById('register-email').value.trim();
+            const username = document.getElementById('register-username').value.trim();
+            const password = document.getElementById('register-password').value.trim();
+            const confirmPassword = document.getElementById('register-confirm-password').value.trim();
+
+            // 基本验证
+            if (!email || !username || !password || !confirmPassword) {
+                alert('请填写所有必填字段');
+                return;
+            }
+
+            // 验证邮箱格式
+            if (!isValidEmail(email)) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+
+            // 验证用户名长度
+            if (username.length > 6) {
+                alert('用户名长度不能超过6个字符');
+                return;
+            }
+
+            // 验证密码匹配
+            if (password !== confirmPassword) {
+                alert('两次输入的密码不一致');
+                return;
+            }
+
+            // 验证密码强度
+            const passwordCheck = checkPasswordStrength(password);
+            if (!passwordCheck.valid) {
+                alert(`密码不符合要求：${passwordCheck.message}`);
+                return;
+            }
+
+            // 验证滑块验证
+            if (!window.captchaVerified) {
+                alert('请完成滑块验证');
+                return;
+            }
+
+            // 获取现有用户数据
+            let encryptedUsers = localStorage.getItem('ab_users');
+            let users = [];
+
+            if (encryptedUsers) {
+                try {
+                    const decrypted = decryptData(encryptedUsers);
+                    users = JSON.parse(decrypted) || [];
+                } catch (e) {
+                    console.error('Failed to decrypt user data', e);
+                    alert('系统错误，无法完成注册');
+                    return;
+                }
+            }
+
+            // 检查邮箱是否已注册
+            const emailExists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+            if (emailExists) {
+                alert('该邮箱已被注册');
+                return;
+            }
+
+            // 检查用户名是否已存在
+            const usernameExists = users.some(u => u.username === username);
+            if (usernameExists) {
+                alert('该用户名已被使用');
+                return;
+            }
+
+            // 创建新用户
+            const newUser = {
+                id: 'user_' + Date.now().toString(),
+                email: email,
+                username: username,
+                password: password,
+                isAdmin: false,
+                op: false,
+                createdAt: new Date().toISOString(),
+                lastLogin: null,
+                isBanned: false,
+                banReason: '',
+                banExpires: null,
+                isMuted: false,
+                muteReason: '',
+                muteExpires: null
+            };
+
+            // 添加新用户到用户列表
+            users.push(newUser);
+
+            // 加密并保存用户数据
+            try {
+                const encrypted = encryptData(JSON.stringify(users));
+                localStorage.setItem('ab_users', encrypted);
+
+                // 注册成功，自动登录
+                window.currentUser = {
+                    id: newUser.id,
+                    username: newUser.username,
+                    email: newUser.email,
+                    isAdmin: false,
+                    op: false,
+                    isLoggedIn: true
+                };
+
+                window.isAdmin = false;
+                window.op = false;
+
+                // 保存当前登录用户
+                const encryptedUser = encryptData(JSON.stringify(window.currentUser), ADMIN_SECRET_KEY);
+                localStorage.setItem('ab_current_user', encryptedUser);
+
+                // 更新界面
+                updateUserInterface();
+                updateAccountModal();
+                closeLoginModal();
+
+                // 清空表单
+                document.getElementById('register-email').value = '';
+                document.getElementById('register-username').value = '';
+                document.getElementById('register-password').value = '';
+                document.getElementById('register-confirm-password').value = '';
+
+                // 关闭账号模态框并重新打开以刷新内容
+                const modal = document.getElementById('account-modal');
+                if (modal.classList.contains('active')) {
+                    toggleAccountModal();
+                    setTimeout(toggleAccountModal, 300);
+                } else {
+                    toggleAccountModal();
+                }
+
+                alert(`注册成功！欢迎您，${username}！`);
+            } catch (e) {
+                console.error('Failed to save user data', e);
+                alert('注册失败，系统错误');
+            }
+        }
+
+        // 管理员登录
+        function adminLogin() {
+            const email = document.getElementById('admin-email').value.trim();
+            const password = document.getElementById('admin-password').value.trim();
+
+            if (!email || !password) {
+                alert('请填写所有必填字段');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+
+            // 获取用户数据
+            const encryptedUsers = localStorage.getItem('ab_users');
+
+            if (!encryptedUsers) {
+                alert('管理员账号不存在');
+                return;
+            }
+
+            try {
+                const decrypted = decryptData(encryptedUsers);
+                const users = JSON.parse(decrypted) || [];
+
+                // 查找管理员用户
+                const adminUser = users.find(u =>
+                    u.email.toLowerCase() === email.toLowerCase() &&
+                    u.password === password &&
+                    u.isAdmin
+                );
+
+                if (adminUser) {
+                    // 登录成功
+                    window.currentUser = {
+                        id: adminUser.id,
+                        username: adminUser.username,
+                        email: adminUser.email,
+                        isAdmin: true,
+                        op: adminUser.op || false,
+                        isLoggedIn: true,
+                        lastLogin: new Date().toISOString()
+                    };
+
+                    window.isAdmin = true;
+                    window.op = adminUser.op || false;
+
+                    // 更新用户最后登录时间
+                    adminUser.lastLogin = new Date().toISOString();
+                    const encrypted = encryptData(JSON.stringify(users));
+                    localStorage.setItem('ab_users', encrypted);
+
+                    // 保存当前登录用户
+                    const encryptedUser = encryptData(JSON.stringify(window.currentUser), ADMIN_SECRET_KEY);
+                    localStorage.setItem('ab_current_user', encryptedUser);
+
+                    // 更新界面
+                    updateUserInterface();
+                    updateAccountModal();
+                    closeAdminLoginModal();
+
+                    // 关闭账号模态框并重新打开以刷新内容
+                    const modal = document.getElementById('account-modal');
+                    if (modal.classList.contains('active')) {
+                        toggleAccountModal();
+                        setTimeout(toggleAccountModal, 300);
+                    }
+
+                    // 跳转到管理页面
+                    showAdminPage();
+
+                    alert(`管理员登录成功！欢迎回来，${adminUser.username}！`);
+                } else {
+                    alert('管理员邮箱或密码不正确，或该账号没有管理员权限');
+                }
+            } catch (e) {
+                console.error('管理员登录失败', e);
+                alert('管理员登录失败，系统错误');
+            }
+        }
+
+        // 显示表单
+        function showForm(formId) {
+            // 隐藏所有表单
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+                form.classList.add('hidden');
+            });
+
+            // 显示选中的表单
+            document.getElementById(`${formId}-form`).classList.remove('hidden');
+            document.getElementById(`${formId}-form`).classList.add('active');
+
+            // 更新标签状态
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active', 'text-cardStart', 'border-b-2', 'border-cardStart');
+                tab.classList.add('text-gray-500');
+            });
+
+            // 设置当前标签状态
+            const activeTab = document.querySelector(`.auth-tab[data-form="${formId}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active', 'text-cardStart', 'border-b-2', 'border-cardStart');
+                activeTab.classList.remove('text-gray-500');
+
+                // 移动指示器
+                const tabIndicator = document.getElementById('tab-indicator');
+                if (tabIndicator) {
+                    tabIndicator.style.width = '50%';
+                    tabIndicator.style.left = formId === 'login' ? '0%' : '50%';
+                }
+            }
+
+            // 重置验证码
+            const captchaContainer = document.querySelector(`#${formId}-form .captcha-container`);
+            if (captchaContainer) {
+                const slider = captchaContainer.querySelector('.captcha-slider');
+                const sliderFill = slider.querySelector('.captcha-slider-fill');
+                const sliderButton = slider.querySelector('.captcha-slider-button');
+                const captchaText = captchaContainer.querySelector('.captcha-text');
+
+                sliderFill.style.width = '0';
+                sliderButton.style.transform = 'translateX(0) translateY(-1px)';
+                sliderButton.innerHTML = '<i class="fa fa-angle-right text-gray-500"></i>';
+                captchaText.textContent = '请向右拖动滑块完成验证';
+                captchaText.className = 'captcha-text text-gray-500';
+                window.captchaVerified = false;
+                slider.style.pointerEvents = '';
+            }
+        }
+
+        // 切换账号模态框
+        function toggleAccountModal() {
+            const modal = document.getElementById('account-modal');
+            modal.classList.toggle('active');
+
+            if (modal.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 账号管理模态框相关
+            document.getElementById('account-button').addEventListener('click', toggleAccountModal);
+            document.getElementById('mobile-account-button').addEventListener('click', toggleAccountModal);
+            document.getElementById('close-account-modal').addEventListener('click', toggleAccountModal);
+
+            // 点击模态框外部关闭
+            document.getElementById('account-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    toggleAccountModal();
+                }
+            });
+
+            // 登录注册模态框相关
+            document.getElementById('modal-login-button').addEventListener('click', openLoginModal);
+            document.getElementById('modal-register-button').addEventListener('click', () => {
+                openLoginModal();
+                setTimeout(() => showForm('register'), 300);
+            });
+            document.getElementById('modal-admin-login-button').addEventListener('click', openAdminLoginModal);
+            document.getElementById('close-modal').addEventListener('click', closeLoginModal);
+            document.getElementById('close-admin-modal').addEventListener('click', closeAdminLoginModal);
+
+            // 点击模态框外部关闭
+            document.getElementById('auth-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeLoginModal();
+                }
+            });
+
+            document.getElementById('admin-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAdminLoginModal();
+                }
+            });
+
+            // 表单切换
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    showForm(this.dataset.form);
+                });
+            });
+
+            // 注册和登录按钮
+            document.getElementById('login-submit').addEventListener('click', login);
+            document.getElementById('register-submit').addEventListener('click', register);
+            document.getElementById('forgot-submit').addEventListener('click', sendResetLink);
+
+            // 其他链接
+            document.querySelector('.create-account').addEventListener('click', function(e) {
+                e.preventDefault();
+                showForm('register');
+            });
+
+            document.querySelector('.back-to-login').addEventListener('click', function(e) {
+                e.preventDefault();
+                showForm('login');
+            });
+
+            document.querySelector('.forgot-password').addEventListener('click', function(e) {
+                e.preventDefault();
+                showForm('forgot');
+            });
+
+            // 登出按钮
+            document.getElementById('modal-logout-button').addEventListener('click', logout);
+            document.getElementById('admin-logout-button').addEventListener('click', logout);
+            document.getElementById('admin-page-logout').addEventListener('click', logout);
+
+            // 管理组功能页面相关
+            document.getElementById('admin-function-button').addEventListener('click', showAdminPage);
+            document.getElementById('mobile-admin-function-button').addEventListener('click', showAdminPage);
+            document.getElementById('back-to-main').addEventListener('click', showMainPage);
+
+            // 管理组操作模态框
+            document.getElementById('close-action-modal').addEventListener('click', closeAdminActionModal);
+            document.getElementById('cancel-action').addEventListener('click', closeAdminActionModal);
+            document.getElementById('confirm-action').addEventListener('click', executeAdminAction);
+
+            // 禁言操作模态框
+            document.getElementById('close-mute-modal').addEventListener('click', closeMuteModal);
+            document.getElementById('cancel-mute').addEventListener('click', closeMuteModal);
+            document.getElementById('confirm-mute').addEventListener('click', executeMuteAction);
+
+            // 关闭用户详情模态框
+            document.getElementById('close-user-details').addEventListener('click', closeUserDetailsModal);
+            document.getElementById('user-details-modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeUserDetailsModal();
+                }
+            });
+
+            // 保存权限设置
+            document.getElementById('save-permissions').addEventListener('click', saveUserPermissions);
+
+            // 管理组功能切换
+            document.getElementById('ban-management-card').addEventListener('click', function() {
+                showAdminContent('ban-management-content');
+            });
+
+            document.getElementById('mute-management-card').addEventListener('click', function() {
+                showAdminContent('mute-management-content');
+            });
+
+            document.getElementById('account-management-card').addEventListener('click', function() {
+                showAdminContent('account-management-content');
+            });
+
+            // 管理员登录按钮
+            document.getElementById('admin-login-submit').addEventListener('click', adminLogin);
+
+            // 用户搜索
+            document.getElementById('search-user').addEventListener('input', function() {
+                loadUserList(this.value);
+            });
+
+            // 封禁管理搜索
+            document.getElementById('ban-search-user').addEventListener('input', function() {
+                loadBanUserList(this.value);
+            });
+
+            // 禁言管理搜索
+            document.getElementById('mute-search-user').addEventListener('input', function() {
+                loadMuteUserList(this.value);
+            });
+
+            // 账号管理搜索
+            document.getElementById('account-search-user').addEventListener('input', function() {
+                loadAccountUserList(this.value);
+            });
+
+            // 用户名长度限制
+            document.getElementById('register-username').addEventListener('input', function() {
+                checkUsernameLength('register-username', 'username-hint');
+            });
+        }
+
+        // 加载用户列表（管理组）
+        function loadUserList(searchTerm = '') {
+            const userListContainer = document.getElementById('user-list');
+
+            // 获取用户数据
+            const encryptedUsers = localStorage.getItem('ab_users');
+
+            if (!encryptedUsers) {
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">暂无用户数据</div>';
+                return;
+            }
+
+            try {
+                const decrypted = decryptData(encryptedUsers);
+                let users = JSON.parse(decrypted) || [];
+
+                // 过滤当前管理员自己
+                users = users.filter(u => u.id !== window.currentUser?.id);
+
+                // 搜索过滤
+                if (searchTerm) {
+                    const term = searchTerm.toLowerCase();
+                    users = users.filter(u =>
+                        u.email.toLowerCase().includes(term) ||
+                        u.username.toLowerCase().includes(term) ||
+                        u.id.toLowerCase().includes(term)
+                    );
+                }
+
+                if (users.length === 0) {
+                    userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">未找到匹配的用户</div>';
+                    return;
+                }
+
+                // 生成用户列表HTML
+                let html = '';
+                users.forEach(user => {
+                    // 确定用户状态标签
+                    let statusClass = 'bg-green-100 text-green-800';
+                    let statusText = '正常';
+
+                    if (user.isBanned) {
+                        statusClass = 'bg-red-100 text-red-800';
+                        statusText = '已封禁';
+                    } else if (user.isMuted) {
+                        statusClass = 'bg-orange-100 text-orange-800';
+                        statusText = '已禁言';
+                    }
+
+                    // 确定用户角色标签
+                    let roleClass = 'bg-gray-100 text-gray-800';
+                    let roleText = '普通用户';
+
+                    if (user.isAdmin) {
+                        roleClass = 'bg-purple-100 text-purple-800';
+                        roleText = '管理组';
+                    } else if (user.op) {
+                        roleClass = 'bg-blue-100 text-blue-800';
+                        roleText = 'OP权限';
+                    }
+
+                    // 格式化注册时间
+                    const regDate = new Date(user.createdAt);
+                    const formattedDate = `${regDate.getFullYear()}-${(regDate.getMonth() + 1).toString().padStart(2, '0')}-${regDate.getDate().toString().padStart(2, '0')}`;
+
+                    html += `
+                    <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-bold">${user.username}</div>
+                                <div class="text-sm text-gray-500 mt-1">${user.email}</div>
+                                <div class="text-xs text-gray-400 mt-1">ID: ${user.id.substring(0, 8)}...</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="inline-block px-2 py-0.5 ${statusClass} text-xs rounded-full mb-1">${statusText}</div>
+                                <div class="inline-block px-2 py-0.5 ${roleClass} text-xs rounded-full">${roleText}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2">注册时间: ${formattedDate}</div>
+                        <div class="flex gap-2 mt-3">
+                            <button class="flex-1 text-xs py-1 px-2 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 transition-colors view-user-details" data-user-id="${user.id}">
+                                查看详情
+                            </button>
+                            <button class="flex-1 text-xs py-1 px-2 ${user.isBanned ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'} rounded hover:opacity-90 transition-colors manage-ban" data-user-id="${user.id}" data-username="${user.username}">
+                                ${user.isBanned ? '解除封禁' : '封禁账号'}
+                            </button>
+                            <button class="flex-1 text-xs py-1 px-2 ${user.isMuted ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'} rounded hover:opacity-90 transition-colors manage-mute" data-user-id="${user.id}" data-username="${user.username}">
+                                ${user.isMuted ? '解除禁言' : '禁言账号'}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                });
+
+                userListContainer.innerHTML = html;
+
+                // 添加事件监听
+                document.querySelectorAll('.view-user-details').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        viewUserDetails(this.dataset.user-id);
+                    });
+                });
+
+                document.querySelectorAll('.manage-ban').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openBanActionModal(this.dataset.user-id, this.dataset.username, this.textContent.trim() === '解除封禁');
+                    });
+                });
+
+                document.querySelectorAll('.manage-mute').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openMuteActionModal(this.dataset.user-id, this.dataset.username, this.textContent.trim() === '解除禁言');
+                    });
+                });
+
+            } catch (e) {
+                console.error('加载用户列表失败', e);
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">加载用户失败</div>';
+            }
+        }
+
+        // 加载封禁管理用户列表
+        function loadBanUserList(searchTerm = '') {
+            const userListContainer = document.getElementById('ban-user-list');
+
+            // 获取用户数据
+            const encryptedUsers = localStorage.getItem('ab_users');
+
+            if (!encryptedUsers) {
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">暂无用户数据</div>';
+                return;
+            }
+
+            try {
+                const decrypted = decryptData(encryptedUsers);
+                let users = JSON.parse(decrypted) || [];
+
+                // 过滤当前管理员自己
+                users = users.filter(u => u.id !== window.currentUser?.id);
+
+                // 搜索过滤
+                if (searchTerm) {
+                    const term = searchTerm.toLowerCase();
+                    users = users.filter(u =>
+                        (u.email.toLowerCase().includes(term) ||
+                         u.username.toLowerCase().includes(term) ||
+                         u.id.toLowerCase().includes(term))
+                    );
+                }
+
+                if (users.length === 0) {
+                    userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">未找到匹配的用户</div>';
+                    return;
+                }
+
+                // 生成用户列表HTML
+                let html = '';
+                users.forEach(user => {
+                    // 确定用户状态标签
+                    let statusClass = 'bg-green-100 text-green-800';
+                    let statusText = '正常';
+
+                    if (user.isBanned) {
+                        statusClass = 'bg-red-100 text-red-800';
+                        statusText = '已封禁';
+                    }
+
+                    // 格式化注册时间
+                    const regDate = new Date(user.createdAt);
+                    const formattedDate = `${regDate.getFullYear()}-${(regDate.getMonth() + 1).toString().padStart(2, '0')}-${regDate.getDate().toString().padStart(2, '0')}`;
+
+                    html += `
+                    <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-bold">${user.username}</div>
+                                <div class="text-sm text-gray-500 mt-1">${user.email}</div>
+                                <div class="text-xs text-gray-400 mt-1">ID: ${user.id.substring(0, 8)}...</div>
+                            </div>
+                            <div>
+                                <div class="inline-block px-2 py-0.5 ${statusClass} text-xs rounded-full">${statusText}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2">注册时间: ${formattedDate}</div>
+                        ${user.isBanned ? `<div class="text-xs text-red-500 mt-1">封禁原因: ${user.banReason || '未说明'}</div>` : ''}
+                        <div class="mt-3">
+                            <button class="w-full text-xs py-1 px-2 ${user.isBanned ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'} rounded hover:opacity-90 transition-colors manage-ban" data-user-id="${user.id}" data-username="${user.username}">
+                                ${user.isBanned ? '解除封禁' : '封禁账号'}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                });
+
+                userListContainer.innerHTML = html;
+
+                // 添加事件监听
+                document.querySelectorAll('.manage-ban').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openBanActionModal(this.dataset.user-id, this.dataset.username, this.textContent.trim() === '解除封禁');
+                    });
+                });
+
+            } catch (e) {
+                console.error('加载封禁用户列表失败', e);
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">加载用户失败</div>';
+            }
+        }
+
+        // 加载禁言管理用户列表
+        function loadMuteUserList(searchTerm = '') {
+            const userListContainer = document.getElementById('mute-user-list');
+
+            // 获取用户数据
+            const encryptedUsers = localStorage.getItem('ab_users');
+
+            if (!encryptedUsers) {
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">暂无用户数据</div>';
+                return;
+            }
+
+            try {
+                const decrypted = decryptData(encryptedUsers);
+                let users = JSON.parse(decrypted) || [];
+
+                // 过滤当前管理员自己
+                users = users.filter(u => u.id !== window.currentUser?.id);
+
+                // 搜索过滤
+                if (searchTerm) {
+                    const term = searchTerm.toLowerCase();
+                    users = users.filter(u =>
+                        (u.email.toLowerCase().includes(term) ||
+                         u.username.toLowerCase().includes(term) ||
+                         u.id.toLowerCase().includes(term))
+                    );
+                }
+
+                if (users.length === 0) {
+                    userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">未找到匹配的用户</div>';
+                    return;
+                }
+
+                // 生成用户列表HTML
+                let html = '';
+                users.forEach(user => {
+                    // 确定用户状态标签
+                    let statusClass = 'bg-green-100 text-green-800';
+                    let statusText = '正常';
+
+                    if (user.isMuted) {
+                        statusClass = 'bg-orange-100 text-orange-800';
+                        statusText = '已禁言';
+                    }
+
+                    // 格式化注册时间
+                    const regDate = new Date(user.createdAt);
+                    const formattedDate = `${regDate.getFullYear()}-${(regDate.getMonth() + 1).toString().padStart(2, '0')}-${regDate.getDate().toString().padStart(2, '0')}`;
+
+                    html += `
+                    <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-bold">${user.username}</div>
+                                <div class="text-sm text-gray-500 mt-1">${user.email}</div>
+                                <div class="text-xs text-gray-400 mt-1">ID: ${user.id.substring(0, 8)}...</div>
+                            </div>
+                            <div>
+                                <div class="inline-block px-2 py-0.5 ${statusClass} text-xs rounded-full">${statusText}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2">注册时间: ${formattedDate}</div>
+                        ${user.isMuted ? `<div class="text-xs text-orange-500 mt-1">禁言原因: ${user.muteReason || '未说明'}</div>` : ''}
+                        <div class="mt-3">
+                            <button class="w-full text-xs py-1 px-2 ${user.isMuted ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'} rounded hover:opacity-90 transition-colors manage-mute" data-user-id="${user.id}" data-username="${user.username}">
+                                ${user.isMuted ? '解除禁言' : '禁言账号'}
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                });
+
+                userListContainer.innerHTML = html;
+
+                // 添加事件监听
+                document.querySelectorAll('.manage-mute').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        openMuteActionModal(this.dataset.user-id, this.dataset.username, this.textContent.trim() === '解除禁言');
+                    });
+                });
+
+            } catch (e) {
+                console.error('加载禁言用户列表失败', e);
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">加载用户失败</div>';
+            }
+        }
+
+        // 加载账号管理用户列表
+        function loadAccountUserList(searchTerm = '') {
+            const userListContainer = document.getElementById('account-user-list');
+
+            // 获取用户数据
+            const encryptedUsers = localStorage.getItem('ab_users');
+
+            if (!encryptedUsers) {
+                userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">暂无用户数据</div>';
+                return;
+            }
+
+            try {
+                const decrypted = decryptData(encryptedUsers);
+                let users = JSON.parse(decrypted) || [];
+
+                // 过滤当前管理员自己
+                users = users.filter(u => u.id !== window.currentUser?.id);
+
+                // 搜索过滤
+                if (searchTerm) {
+                    const term = searchTerm.toLowerCase();
+                    users = users.filter(u =>
+                        (u.email.toLowerCase().includes(term) ||
+                         u.username.toLowerCase().includes(term) ||
+                         u.id.toLowerCase().includes(term))
+                    );
+                }
+
+                if (users.length === 0) {
+                    userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">未找到匹配的用户</div>';
+                    return;
+                }
+
+                // 生成用户列表HTML
+                let html = '';
+                users.forEach(user => {
+                    // 确定用户角色标签
+                    let roleClass = 'bg-gray-100 text-gray-800';
+                    let roleText = '普通用户';
+
+                    if (user.isAdmin) {
+                        roleClass = 'bg-purple-100 text-purple-800';
+                        roleText = '管理组';
+                    } else if (user.op) {
+                        roleClass = 'bg-blue-100 text-blue-800';
+                        roleText = 'OP权限';
+                    }
+
+                    // 格式化注册时间
+                    const regDate = new Date(user.createdAt);
+                    const formattedDate = `${regDate.getFullYear()}-${(regDate.getMonth() + 1).toString().padStart(2, '0')}-${regDate.getDate().toString().padStart(2, '0')}`;
+
+                    html += `
+                    <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-bold">${user.username}</div>
+                                                        <div class="text-sm text-gray-500 mt-1">${user.email}</div>
+                        <div class="text-xs text-gray-400 mt-1">ID: ${user.id.substring(0, 8)}...</div>
+                    </div>
+                    <div>
+                        <div class="inline-block px-2 py-0.5 ${roleClass} text-xs rounded-full">${roleText}</div>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 mt-2">注册时间: ${formattedDate}</div>
+                <div class="mt-3">
+                    <button class="w-full text-xs py-1 px-2 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 transition-colors view-user-details" data-user-id="${user.id}">
+                        管理账号
+                    </button>
+                </div>
+            </div>
+            `;
+        });
+
+        userListContainer.innerHTML = html;
+
+        // 添加事件监听
+        document.querySelectorAll('.view-user-details').forEach(btn => {
+            btn.addEventListener('click', function() {
+                viewUserDetails(this.dataset.user-id);
+            });
+        });
+
+    } catch (e) {
+        console.error('加载账号管理用户列表失败', e);
+        userListContainer.innerHTML = '<div class="text-center text-gray-500 text-sm py-6">加载用户失败</div>';
+    }
+}
+
+// 查看用户详情
+function viewUserDetails(userId) {
+    // 获取用户数据
+    const encryptedUsers = localStorage.getItem('ab_users');
+
+    if (!encryptedUsers) {
+        alert('未找到用户数据');
+        return;
+    }
+
+    try {
+        const decrypted = decryptData(encryptedUsers);
+        const users = JSON.parse(decrypted) || [];
+
+        // 查找用户
+        const user = users.find(u => u.id === userId);
+
+        if (!user) {
+            alert('未找到该用户');
+            return;
+        }
+
+        // 填充用户详情
+        document.getElementById('detail-user-id').value = user.id;
+        document.getElementById('detail-username').textContent = user.username;
+        document.getElementById('detail-email').textContent = user.email;
+        document.getElementById('detail-id').textContent = user.id;
+
+        // 格式化注册时间
+        const regDate = new Date(user.createdAt);
+        const formattedRegDate = `${regDate.getFullYear()}-${(regDate.getMonth() + 1).toString().padStart(2, '0')}-${regDate.getDate().toString().padStart(2, '0')} ${regDate.getHours().toString().padStart(2, '0')}:${regDate.getMinutes().toString().padStart(2, '0')}`;
+        document.getElementById('detail-registration-date').textContent = formattedRegDate;
+
+        // 格式化最后活跃时间
+        if (user.lastLogin) {
+            const lastLoginDate = new Date(user.lastLogin);
+            const formattedLastLogin = `${lastLoginDate.getFullYear()}-${(lastLoginDate.getMonth() + 1).toString().padStart(2, '0')}-${lastLoginDate.getDate().toString().padStart(2, '0')} ${lastLoginDate.getHours().toString().padStart(2, '0')}:${lastLoginDate.getMinutes().toString().padStart(2, '0')}`;
+            document.getElementById('detail-last-active').textContent = formattedLastLogin;
+        } else {
+            document.getElementById('detail-last-active').textContent = '从未登录';
+        }
+
+        // 设置账号状态
+        if (user.isBanned) {
+            document.getElementById('detail-status').textContent = '已封禁';
+            document.getElementById('detail-status').className = 'inline-block px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full';
+        } else if (user.isMuted) {
+            document.getElementById('detail-status').textContent = '已禁言';
+            document.getElementById('detail-status').className = 'inline-block px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full';
+        } else {
+            document.getElementById('detail-status').textContent = '正常';
+            document.getElementById('detail-status').className = 'inline-block px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full';
+        }
+
+        // 设置角色标签
+        if (user.isAdmin) {
+            document.getElementById('detail-role').textContent = '管理组';
+            document.getElementById('detail-role').className = 'inline-block px-2 py-0.5 bg-purple-600 text-white text-xs rounded-full';
+        } else if (user.op) {
+            document.getElementById('detail-role').textContent = 'OP权限';
+            document.getElementById('detail-role').className = 'inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full';
+        } else {
+            document.getElementById('detail-role').textContent = '普通用户';
+            document.getElementById('detail-role').className = 'inline-block px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded-full';
+        }
+
+        // 设置权限复选框
+        document.getElementById('set-admin-permission').checked = user.isAdmin || false;
+        document.getElementById('set-op-permission').checked = user.op || false;
+
+        // 显示用户详情模态框
+        document.getElementById('user-details-modal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+    } catch (e) {
+        console.error('查看用户详情失败', e);
+        alert('查看用户详情失败，系统错误');
+    }
+}
+
+// 保存用户权限设置
+function saveUserPermissions() {
+    const userId = document.getElementById('detail-user-id').value;
+    const isAdmin = document.getElementById('set-admin-permission').checked;
+    const isOp = document.getElementById('set-op-permission').checked;
+
+    // 获取用户数据
+    const encryptedUsers = localStorage.getItem('ab_users');
+
+    if (!encryptedUsers || !userId) {
+        alert('未找到用户数据');
+        return;
+    }
+
+    try {
+        const decrypted = decryptData(encryptedUsers);
+        let users = JSON.parse(decrypted) || [];
+
+        // 查找用户
+        const userIndex = users.findIndex(u => u.id === userId);
+
+        if (userIndex === -1) {
+            alert('未找到该用户');
+            return;
+        }
+
+        // 不能修改自己的权限
+        if (users[userIndex].id === window.currentUser?.id) {
+            alert('不能修改自己的权限');
+            return;
+        }
+
+        // 更新权限设置
+        users[userIndex].isAdmin = isAdmin;
+        users[userIndex].op = isOp;
+
+        // 保存更新
+        const encrypted = encryptData(JSON.stringify(users));
+        localStorage.setItem('ab_users', encrypted);
+
+        // 更新界面
+        alert('权限设置已保存');
+
+        // 刷新用户列表
+        loadUserList(document.getElementById('search-user').value);
+        loadAccountUserList(document.getElementById('account-search-user').value);
+
+        // 刷新当前详情页
+        viewUserDetails(userId);
+
+    } catch (e) {
+        console.error('保存用户权限失败', e);
+        alert('保存用户权限失败，系统错误');
+    }
+}
+
+// 打开封禁操作模态框
+function openBanActionModal(userId, username, isUnban = false) {
+    document.getElementById('action-user-id').value = userId;
+    document.getElementById('ban-username').textContent = username;
+    document.getElementById('ban-action-text').textContent = isUnban ? '解除封禁' : '封禁';
+    document.getElementById('action-type').value = isUnban ? 'unban' : 'ban';
+
+    // 如果是解除封禁，隐藏原因和时长设置
+    if (isUnban) {
+        document.getElementById('ban-reason').style.display = 'none';
+        document.getElementById('ban-duration').style.display = 'none';
+        document.querySelector('label[for="ban-reason"]').style.display = 'none';
+        document.querySelector('label[for="ban-duration"]').style.display = 'none';
+    } else {
+        document.getElementById('ban-reason').style.display = 'block';
+        document.getElementById('ban-duration').style.display = 'block';
+        document.querySelector('label[for="ban-reason"]').style.display = 'block';
+        document.querySelector('label[for="ban-duration"]').style.display = 'block';
+        document.getElementById('ban-reason').value = '';
+        document.getElementById('ban-duration').value = '-1';
+    }
+
+    document.getElementById('admin-action-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// 关闭管理组操作模态框
+function closeAdminActionModal() {
+    document.getElementById('admin-action-modal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// 执行管理组操作
+function executeAdminAction() {
+    const userId = document.getElementById('action-user-id').value;
+    const actionType = document.getElementById('action-type').value;
+    const reason = document.getElementById('ban-reason').value.trim() || '未说明';
+    const duration = document.getElementById('ban-duration').value;
+
+    // 获取用户数据
+    const encryptedUsers = localStorage.getItem('ab_users');
+
+    if (!encryptedUsers || !userId) {
+        alert('未找到用户数据');
+        closeAdminActionModal();
+        return;
+    }
+
+    try {
+        const decrypted = decryptData(encryptedUsers);
+        let users = JSON.parse(decrypted) || [];
+
+        // 查找用户
+        const userIndex = users.findIndex(u => u.id === userId);
+
+        if (userIndex === -1) {
+            alert('未找到该用户');
+            closeAdminActionModal();
+            return;
+        }
+
+        // 不能操作自己的账号
+        if (users[userIndex].id === window.currentUser?.id) {
+            alert('不能操作自己的账号');
+            closeAdminActionModal();
+            return;
+        }
+
+        // 不能操作其他管理员
+        if (users[userIndex].isAdmin && window.currentUser?.isAdmin) {
+            alert('不能操作其他管理员账号');
+            closeAdminActionModal();
+            return;
+        }
+
+        // 执行封禁或解封操作
+        if (actionType === 'ban') {
+            users[userIndex].isBanned = true;
+            users[userIndex].banReason = reason;
+
+            // 设置封禁过期时间
+            if (duration === '-1') {
+                users[userIndex].banExpires = null; // 永久封禁
+            } else {
+                const expireDate = new Date();
+                expireDate.setDate(expireDate.getDate() + parseInt(duration));
+                users[userIndex].banExpires = expireDate.toISOString();
+            }
+
+            alert(`用户 ${users[userIndex].username} 已被封禁`);
+        } else {
+            users[userIndex].isBanned = false;
+            users[userIndex].banReason = '';
+            users[userIndex].banExpires = null;
+            alert(`用户 ${users[userIndex].username} 已解除封禁`);
+        }
+
+        // 保存更新
+        const encrypted = encryptData(JSON.stringify(users));
+        localStorage.setItem('ab_users', encrypted);
+
+        // 关闭模态框
+        closeAdminActionModal();
+
+        // 刷新用户列表
+        loadUserList(document.getElementById('search-user').value);
+        loadBanUserList(document.getElementById('ban-search-user').value);
+
+    } catch (e) {
+        console.error('执行管理操作失败', e);
+        alert('执行操作失败，系统错误');
+        closeAdminActionModal();
+    }
+}
+
+// 打开禁言操作模态框
+function openMuteActionModal(userId, username, isUnmute = false) {
+document.getElementById('mute-user-id').value = userId;
+document.getElementById('mute-username').textContent = username;
+document.getElementById('mute-action-text').textContent = isUnmute ? '解除禁言' : '禁言';
+
+// 如果是解除禁言，隐藏原因和时长设置
+if (isUnmute) {
+    document.getElementById('mute-reason').style.display = 'none';
+    document.getElementById('mute-duration').style.display = 'none';
+    document.querySelector('label[for="mute-reason"]').style.display = 'none';
+    document.querySelector('label[for="mute-duration"]').style.display = 'none';
+} else {
+    document.getElementById('mute-reason').style.display = 'block';
+    document.getElementById('mute-duration').style.display = 'block';
+    document.querySelector('label[for="mute-reason"]').style.display = 'block';
+    document.querySelector('label[for="mute-duration"]').style.display = 'block';
+    document.getElementById('mute-reason').value = '';
+    document.getElementById('mute-duration').value = '24';
+}
+
+
+// 关闭禁言操作模态框
+document.getElementById('mute-modal').classList.add('active');
+document.body.style.overflow = 'hidden';
+}
+function closeMuteModal() {
+document.getElementById('mute-modal').classList.remove('active');
+document.body.style.overflow = '';
+}
+
+// 执行禁言操作
+function executeMuteAction() {
+const userId = document.getElementById('mute-user-id').value;
+const isUnmute = document.getElementById('mute-action-text').textContent === '解除禁言';
+const reason = document.getElementById('mute-reason').value.trim() || '未说明';
+const duration = document.getElementById('mute-duration').value;
+
+// 获取用户数据
+const encryptedUsers = localStorage.getItem('ab_users');
+
+if (!encryptedUsers || !userId) {
+    alert('未找到用户数据');
+    closeMuteModal();
+    return;
+}
+
+try {
+    const decrypted = decryptData(encryptedUsers);
+    let users = JSON.parse(decrypted) || [];
+
+    // 查找用户
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+        alert('未找到该用户');
+        closeMuteModal();
+        return;
+    }
+
+    // 执行禁言或解除禁言操作
+    if (isUnmute) {
+        users[userIndex].isMuted = false;
+        users[userIndex].muteReason = '';
+        users[userIndex].muteExpires = null;
+        alert(`用户 ${users[userIndex].username} 已解除禁言`);
+    } else {
+        users[userIndex].isMuted = true;
+        users[userIndex].muteReason = reason;
+
+        // 设置禁言过期时间
+        if (duration === '-1') {
+            users[userIndex].muteExpires = null; // 永久禁言
+        } else {
+            const expireDate = new Date();
+            expireDate.setHours(expireDate.getHours() + parseInt(duration));
+            users[userIndex].muteExpires = expireDate.toISOString();
+        }
+
+        alert(`用户 ${users[userIndex].username} 已被禁言`);
+    }
+
+    // 保存更新
+    const encrypted = encryptData(JSON.stringify(users));
+    localStorage.setItem('ab_users', encrypted);
+
+    // 调用TRAE记录操作
+    callTRAE('logAction', {
+        action: isUnmute ? 'unmuteUser' : 'muteUser',
+        userId: userId,
+        operator: window.currentUser?.id,
+        timestamp: new Date().toISOString()
+    });
+
+    // 关闭模态框
+    closeMuteModal();
+
+    // 刷新用户列表
+    loadUserList(document.getElementById('search-user').value);
+    loadMuteUserList(document.getElementById('mute-search-user').value);
+
+} catch (e) {
+    console.error('执行禁言操作失败', e);
+    alert('执行操作失败，系统错误');
+    closeMuteModal();
+}
+}
+
+// 显示管理组内容
+function showAdminContent(contentId) {
+// 隐藏所有内容
+document.querySelectorAll('.admin-content').forEach(content => {
+    content.classList.add('hidden');
+});
+
+// 显示选中的内容
+document.getElementById(contentId).classList.remove('hidden');
+}
+
+// 显示管理组页面
+function showAdminPage() {
+// 检查管理员权限
+if (!window.isAdmin) {
+    openAdminLoginModal();
+    return;
+}
+
+// 切换页面
+document.getElementById('main-page').classList.remove('active');
+document.getElementById('admin-page').classList.add('active');
+}
+
+// 显示主页面
+function showMainPage() {
+document.getElementById('admin-page').classList.remove('active');
+document.getElementById('main-page').classList.add('active');
+}
+
+// 打开登录模态框
+function openLoginModal() {
+document.getElementById('auth-modal').classList.add('active');
+document.body.style.overflow = 'hidden';
+showForm('login');
+}
+
+// 关闭登录模态框
+function closeLoginModal() {
+document.getElementById('auth-modal').classList.remove('active');
+document.body.style.overflow = '';
+}
+
+// 打开管理员登录模态框
+function openAdminLoginModal() {
+document.getElementById('admin-modal').classList.add('active');
+document.body.style.overflow = 'hidden';
+}
+
+// 关闭管理员登录模态框
+function closeAdminLoginModal() {
+document.getElementById('admin-modal').classList.remove('active');
+document.body.style.overflow = '';
+}
+
+// 登出功能
+function logout() {
+if (confirm('确定要退出登录吗？')) {
+    // 清除当前用户
+    localStorage.removeItem('ab_current_user');
+    window.currentUser = null;
+    window.isAdmin = false;
+    window.op = false;
+
+    // 更新界面
+    updateUserInterface();
+    updateAccountModal();
+
+    // 关闭所有模态框
+    closeLoginModal();
+    closeAdminLoginModal();
+    closeAdminActionModal();
+    closeMuteModal();
+    closeUserDetailsModal();
+    toggleAccountModal();
+    
+    // 返回主页面
+    showMainPage();
+
+    alert('已成功退出登录');
+}
+}
+
+// 发送密码重置链接
+function sendResetLink() {
+const email = document.getElementById('forgot-email').value.trim();
+
+if (!email) {
+    alert('请输入邮箱地址');
+    return;
+}
+
+if (!isValidEmail(email)) {
+    alert('请输入有效的邮箱地址');
+    return;
+}
+
+// 模拟发送重置链接
+alert(`重置密码的链接已发送到 ${email}，请查收邮件并按照提示操作`);
+showForm('login');
+}
+</script>
 </body>
 </html>
